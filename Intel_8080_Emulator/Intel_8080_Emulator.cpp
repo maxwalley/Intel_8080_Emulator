@@ -202,7 +202,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     uint16_t location = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                     
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location]);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location]);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -215,7 +215,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     uint16_t location = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                     
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], true, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], true, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -228,7 +228,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     uint16_t location = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                     
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], false);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], false);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -240,7 +240,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     uint16_t location = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                     
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], false, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[location], false, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -256,7 +256,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10000SSS - Add Register
                 case 0x80:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A));
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A));
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -267,7 +267,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10001SSS - Add Register with carry
                 case 0x88:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A), true, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A), true, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -278,7 +278,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10010SSS - Subtract Register
                 case 0x90:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), false);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), false);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -288,7 +288,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10011SSS - Subtract Register with borrow
                 case 0x91:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), false, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), false, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -308,7 +308,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11000110 - Add Immediate
                 case 0xC6:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
+                    uint8_t result = alu.operateAndSetFlags(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -319,7 +319,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11001110 - Add Immediate with Carry
                 case 0xCE:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A), true, true);
+                    uint8_t result = alu.operateAndSetFlags(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A), true, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -344,7 +344,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11010110 - Subtract Immediate
                 case 0xD6:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], false, false);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], false);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -354,7 +354,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11011110 - Subtract Immediate with Borrow
                 case 0xDE:
                 {
-                    uint8_t result = alu.operateAndSetAllFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], false, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], false, static_cast<ALU::Flag>(0), true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     

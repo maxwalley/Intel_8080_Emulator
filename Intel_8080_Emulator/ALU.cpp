@@ -42,7 +42,7 @@ void ALU::checkCarryCheck()
     uint8_t first = 0xFF;
     uint8_t second = 0xFF;
     
-    operateAndSetCarryFlags(first, second, true);
+    operateAndSetFlags(first, second);
     
     assert(getFlag(Flag::Carry));
     

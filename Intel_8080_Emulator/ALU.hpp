@@ -21,6 +21,7 @@ public:
     
     enum class Flag
     {
+        None = 0,
         Zero = 1 << 0,
         Sign = 1 << 1,
         Parity = 1 << 2,
@@ -31,64 +32,8 @@ public:
     void setFlag(Flag f, bool val);
     bool getFlag(Flag f) const;
     
-    //Will work on zero, sign and parity bits
     template<unsigned_integral IntType>
-    void setFlagsBasedOnValue(IntType val)
-    {
-        //Zero flag
-        setFlag(Flag::Zero, val == 0);
-            
-        //Sign flag
-        const int numBits = std::numeric_limits<IntType>::digits;
-        uint8_t test = val >> (numBits - 1);
-        setFlag(Flag::Sign, test);
-            
-        //Parity flag
-        setFlag(Flag::Parity, checkParity(val));
-    }
-    
-    //Checks and sets appropiate flag for carrys and borrows, if add is false performs a subtraction (first - second)
-    template<unsigned_integral IntType>
-    IntType operateAndSetCarryFlags(IntType first, IntType second, bool add = true, bool affectCarryFlag = true, bool useCarryFlag = false)
-    {
-        if(add)
-        {
-            //This seems to check for carry in apple clang
-            setFlag(Flag::Carry, first + second + (useCarryFlag ? getFlag(Flag::Carry) : 0) > std::numeric_limits<IntType>::max());
-        
-            IntType result = first + second;
-        
-            //Get the bits which weren't set in first or second but were set in result?
-            IntType carryBits = result ^ first ^ second;
-        
-            //Check the 4th bit
-            IntType carryInFourthBit = (1 << 4) & carryBits;
-        
-            setFlag(Flag::AuxillaryCarry, carryInFourthBit > 0);
-        
-            return result;
-        }
-    
-        //Carry turns into borrow flag
-        if(useCarryFlag)
-        {
-            setFlag(Flag::Carry, getFlag(Flag::Carry) > second || (second - getFlag(Flag::Carry)) > first);
-            return first - second - getFlag(Flag::Carry);
-        }
-        
-        setFlag(Flag::Carry, second > first);
-        return first - second;
-    }
-    
-    template<unsigned_integral IntType>
-    IntType operateAndSetAllFlags(IntType first, IntType second, bool add = true, bool carryFlag = false)
-    {
-        const auto result = operateAndSetCarryFlags(first, second, add, carryFlag);
-        
-        setFlagsBasedOnValue(result);
-        
-        return result;
-    }
+    IntType operateAndSetFlags(IntType first, IntType second, bool add = true, Flag flagsToExclude = static_cast<Flag>(0), bool useCarry = false);
     
 private:
     //Returns true if even parity
@@ -109,3 +54,75 @@ private:
 
 ALU::Flag operator|(ALU::Flag first, ALU::Flag second);
 bool operator&(ALU::Flag first, ALU::Flag second);
+
+template<unsigned_integral IntType>
+IntType ALU::operateAndSetFlags(IntType first, IntType second, bool add, Flag flagsToExclude, bool useCarry)
+{
+    IntType result;
+    
+    if(add)
+    {
+        if(!(flagsToExclude & Flag::Carry))
+        {
+            //This seems to check for carry in apple clang
+            setFlag(Flag::Carry, first + second + (useCarry ? getFlag(Flag::Carry) : 0) > std::numeric_limits<IntType>::max());
+        }
+    
+        result = first + second + (useCarry ? getFlag(Flag::Carry) : 0);
+    }
+    else
+    {
+        //Carry turns into borrow flag
+        if(useCarry)
+        {
+            if(!(flagsToExclude & Flag::Carry))
+            {
+                setFlag(Flag::Carry, getFlag(Flag::Carry) > second || (second - getFlag(Flag::Carry)) > first);
+            }
+            
+            result = first - second - getFlag(Flag::Carry);
+        }
+        else
+        {
+            if(!(flagsToExclude & Flag::Carry))
+            {
+                setFlag(Flag::Carry, second > first);
+            }
+            
+            result = first - second;
+        }
+    }
+    
+    if(!(flagsToExclude & Flag::AuxillaryCarry))
+    {
+        //Get the bits which weren't set in first or second but were set in result?
+        IntType carryBits = result ^ first ^ second;
+
+        //Check the 4th bit
+        IntType carryInFourthBit = (1 << 4) & carryBits;
+
+        setFlag(Flag::AuxillaryCarry, carryInFourthBit > 0);
+    }
+    
+    //Zero flag
+    if(!(flagsToExclude & Flag::Zero))
+    {
+        setFlag(Flag::Zero, result == 0);
+    }
+        
+    //Sign flag
+    if(!(flagsToExclude & Flag::Sign))
+    {
+        const int numBits = std::numeric_limits<IntType>::digits;
+        uint8_t test = result >> (numBits - 1);
+        setFlag(Flag::Sign, test);
+    }
+        
+    //Parity flag
+    if(!(flagsToExclude & Flag::Parity))
+    {
+        setFlag(Flag::Parity, checkParity(result));
+    }
+    
+    return result;
+}
