@@ -30,7 +30,7 @@ void Intel_8080_Emulator::decodeAndExecute()
         //00
         case 0x00:
             
-            switch (currentOpcode & 0xFF)
+            switch(currentOpcode & 0xFF)
             {
                 //00110110 - Move to memory immediate
                 case 0x36:
@@ -92,71 +92,82 @@ void Intel_8080_Emulator::decodeAndExecute()
                     break;
             }
             
-            //00DDD110 - Move Immediate
-            if((currentOpcode & 0x6) == 0x6)
+            //Look at last 4 bits
+            switch(currentOpcode & 0xCF)
             {
-                RegisterManager::Register destReg = getFirstRegister();
-                uint8_t dataByte = memory[programCounter + 1];
+                //00RP0001 - Load Register Pair Immediate
+                case 0x1:
+                {
+                    RegisterManager::RegisterPair destPair = getRegisterPair();
+                    uint8_t lowOrderByte = memory[programCounter + 1];
+                    uint8_t highOrderByte = memory[programCounter + 2];
+                    
+                    registers.setRegisterPair(destPair, highOrderByte, lowOrderByte);
+                    
+                    programCounter += 3;
+                    return;
+                }
+                
+                //00RP1010 - Load accumulator indirect
+                case 0xA:
+                {
+                    RegisterManager::RegisterPair pair = getRegisterPair();
+                
+                    if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
+                    {
+                        assert(false);
+                        return;
+                    }
+                    
+                    uint8_t data = memory[registers.getValueFromRegisterPair(pair)];
+                    
+                    registers.setRegisterValue(RegisterManager::Register::A, data);
+                    
+                    ++programCounter;
+                    return;
+                }
+                
+                //00RP0010 - Store accumulator indirect
+                case 0x2:
+                {
+                    RegisterManager::RegisterPair pair = getRegisterPair();
+                    
+                    if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
+                    {
+                        assert(false);
+                        return;
+                    }
+                    
+                    uint16_t destAddress = registers.getValueFromRegisterPair(pair);
+                    
+                    memory[destAddress] = registers.getRegisterValue(RegisterManager::Register::A);
+                    
+                    ++programCounter;
+                    return;
+                }
+            }
+            
+            //Look at the last 3 bits
+            switch(currentOpcode & 0xC7)
+            {
+                //00DDD110 - Move Immediate
+                case 0x6:
+                {
+                    RegisterManager::Register destReg = getFirstRegister();
+                    uint8_t dataByte = memory[programCounter + 1];
 
-                registers.setRegisterValue(destReg, dataByte);
-                
-                programCounter += 2;
-            }
-            
-            //00RP0001 - Load Register Pair Immediate
-            else if((currentOpcode & 0x1) == 0x1)
-            {
-                RegisterManager::RegisterPair destPair = getRegisterPair();
-                uint8_t lowOrderByte = memory[programCounter + 1];
-                uint8_t highOrderByte = memory[programCounter + 2];
-                
-                registers.setRegisterPair(destPair, highOrderByte, lowOrderByte);
-                
-                programCounter += 3;
-            }
-            
-            //00RP1010 - Load accumulator indirect
-            else if((currentOpcode & 0xA) == 0xA)
-            {
-                RegisterManager::RegisterPair pair = getRegisterPair();
-                
-                if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
-                {
-                    assert(false);
+                    registers.setRegisterValue(destReg, dataByte);
+                        
+                    programCounter += 2;
                     return;
                 }
-                
-                uint8_t data = memory[registers.getValueFromRegisterPair(pair)];
-                
-                registers.setRegisterValue(RegisterManager::Register::A, data);
-                
-                ++programCounter;
             }
-            
-            //00RP0010 - Store accumulator indirect
-            else if((currentOpcode & 0x2) == 0x2)
-            {
-                RegisterManager::RegisterPair pair = getRegisterPair();
-                
-                if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
-                {
-                    assert(false);
-                    return;
-                }
-                
-                uint16_t destAddress = registers.getValueFromRegisterPair(pair);
-                
-                memory[destAddress] = registers.getRegisterValue(RegisterManager::Register::A);
-                
-                ++programCounter;
-            }
-            return;
             
         //01
         case 0x40:
             
             //01DDD110 - Move from memory
-            if((currentOpcode & 0x6) == 0x6)
+            if((currentOpcode & 0x7) == 0x6)
             {
                 uint16_t sourceMemoryLocation = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                 
@@ -165,6 +176,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 registers.setRegisterValue(destReg, memory[sourceMemoryLocation]);
                 
                 ++programCounter;
+                return;
             }
             
             //01110SSS - Move to memory
@@ -177,6 +189,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 memory[destMemoryLocation] = registers.getRegisterValue(sourceReg);
                 
                 ++programCounter;
+                return;
             }
             
             //01DDDSSS - Move register
@@ -188,6 +201,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 registers.setRegisterValue(firstReg, registers.getRegisterValue(secondReg));
                 
                 ++programCounter;
+                return;
             }
             
             break;
@@ -233,6 +247,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     ++programCounter;
+                    return;
                 }
                     
                 //10011110 - Subtract Memory with Borrow
@@ -245,6 +260,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     ++programCounter;
+                    return;
                 }
                     
                 default:
@@ -283,6 +299,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     ++programCounter;
+                    return;
                 }
                     
                 //10011SSS - Subtract Register with borrow
@@ -293,6 +310,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     ++programCounter;
+                    return;
                 }
                 
                 default:
@@ -349,6 +367,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     programCounter += 2;
+                    return;
                 }
                     
                 //11011110 - Subtract Immediate with Borrow
@@ -359,6 +378,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
                     programCounter += 2;
+                    return;
                 }
                     
                 default:
