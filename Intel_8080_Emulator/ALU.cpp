@@ -14,50 +14,26 @@ ALU::ALU()
 
 void ALU::setFlag(Flag f, bool val)
 {
-    flags[static_cast<int>(f)] = val;
+    for(int index = 0; index < flags.size(); ++index)
+    {
+        if(f & Flag(1 << index))
+        {
+            flags[index] = val;
+        }
+    }
 }
 
 bool ALU::getFlag(Flag f) const
 {
-    return flags[static_cast<int>(f)];
-}
-
-template<unsigned_integral IntType>
-void ALU::setFlagsBasedOnValue(IntType val)
-{
-    //Zero flag
-    setFlag(Flag::Zero, val == 0);
-    
-    //Sign flag
-    const int numBits = std::numeric_limits<IntType>::digits;
-    uint8_t test = val >> numBits - 1;
-    setFlag(Flag::Sign, test);
-    
-    //Parity flag
-    setFlag(Flag::Parity, checkParity(val));
-}
-
-template<unsigned_integral IntType>
-IntType ALU::operateAndSetCarryFlag(IntType first, IntType second, bool add)
-{
-    if(add)
+    for(int index = 0; index < flags.size(); ++index)
     {
-        //This seems to check for carry in apple clang
-        setFlag(Flag::Carry, first + second > std::numeric_limits<IntType>::max());
-        return first + second;
+        if(f & Flag(1 << index))
+        {
+            return flags[index];
+        }
     }
     
-    setFlag(Flag::Carry, second > first);
-    return first - second;
-}
-
-template<unsigned_integral IntType>
-bool ALU::checkParity(IntType val) const
-{
-    //This might be too slow to construct the bitset
-    const int numBits = std::numeric_limits<IntType>::digits;
-    std::bitset<numBits> bits(val);
-    return bits.count() % 2 == 0;
+    return false;
 }
 
 void ALU::checkCarryCheck()
@@ -66,9 +42,19 @@ void ALU::checkCarryCheck()
     uint8_t first = 0xFF;
     uint8_t second = 0xFF;
     
-    operateAndSetCarryFlag(first, second, true);
+    operateAndSetCarryFlags(first, second, true);
     
     assert(getFlag(Flag::Carry));
     
     setFlag(Flag::Carry, false);
+}
+
+ALU::Flag operator|(ALU::Flag first, ALU::Flag second)
+{
+    return static_cast<ALU::Flag>(static_cast<int>(first) | static_cast<int>(second));
+}
+
+bool operator&(ALU::Flag first, ALU::Flag second)
+{
+    return static_cast<int>(first) & static_cast<int>(second);
 }
