@@ -28,12 +28,14 @@ private:
     
     uint16_t getAddressInDataBytes() const;
     
+    bool checkCurrentCondition() const;
+    
     uint8_t currentOpcode;
     
     uint16_t programCounter;
     
     uint8_t stackPointer;
-    std::vector<uint16_t> stack;
+    std::array<uint16_t, 32> stack;
     
     std::array<uint8_t, 16384> memory;
     

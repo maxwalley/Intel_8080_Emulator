@@ -88,6 +88,70 @@ void Intel_8080_Emulator::decodeAndExecute()
                     return;
                 }
                     
+                //00110100 - Increment Memory
+                case 0x34:
+                {
+                    uint16_t address = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    
+                    uint8_t result = alu.operateAndSetFlags(memory[address], uint8_t(1), true, ALU::Flag::Carry, false);
+                    
+                    memory[address] = result;
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
+                //00110101 - Decrement Memory
+                case 0x35:
+                {
+                    uint16_t address = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    
+                    uint8_t result = alu.operateAndSetFlags(memory[address], uint8_t(1), false, ALU::Flag::Carry, false);
+                    
+                    memory[address] = result;
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
+                //00100111 - Decimal Adjust Accumulator
+                case 0x27:
+                {
+                    uint8_t accumulatorVal = registers.getRegisterValue(RegisterManager::Register::A);
+                    
+                    //If the value of the least significant 4 bits of the accumulator is greater than 9 or if the AC flag is set, 6 is added to the accumulator.
+                    if(((accumulatorVal & 0xF) > 0x9) | alu.getFlag(ALU::Flag::AuxillaryCarry))
+                    {
+                        accumulatorVal += 0x6;
+                    }
+                    
+                    //If the value of the most significant 4 bits of the accumulator is now greater than 9, or if the CY flag is set, 6 is added to the most significant 4 bits of the accumulator.
+                    if((((accumulatorVal & 0xF0) >> 4) > 0x9) | alu.getFlag(ALU::Flag::Carry))
+                    {
+                        accumulatorVal += 0x60;
+                    }
+                    
+                    registers.setRegisterValue(RegisterManager::Register::A, accumulatorVal);
+                    ++programCounter;
+                    return;
+                }
+                 
+                //00111111 - Complement Carry
+                case 0x3F:
+                {
+                    alu.setFlag(ALU::Flag::Carry, !alu.getFlag(ALU::Flag::Carry));
+                    ++programCounter;
+                    return;
+                }
+                    
+                //00110111 - Set Carry
+                case 0x37:
+                {
+                    alu.setFlag(ALU::Flag::Carry, true);
+                    ++programCounter;
+                    return;
+                }
+                    
                 default:
                     break;
             }
@@ -145,6 +209,41 @@ void Intel_8080_Emulator::decodeAndExecute()
                     ++programCounter;
                     return;
                 }
+                    
+                //00RP0011 - Increment Register Pair
+                case 0x3:
+                {
+                    uint16_t incrementedVal = registers.getValueFromRegisterPair(getRegisterPair()) + 1;
+                    
+                    registers.setRegisterPair(getRegisterPair(), incrementedVal >> 8, incrementedVal);
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
+                //00RP1011 - Decrement Register Pair
+                case 0xB:
+                {
+                    uint16_t decrementedVal = registers.getValueFromRegisterPair(getRegisterPair()) - 1;
+                    
+                    registers.setRegisterPair(getRegisterPair(), decrementedVal >> 8, decrementedVal);
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
+                //00RP1001 - Add Register Pair to H and L
+                case 0x9:
+                {
+                    ALU::Flag flagsToExclude = ALU::Flag::Zero | ALU::Flag::Sign | ALU::Flag::Parity | ALU::Flag::AuxillaryCarry;
+                    
+                    uint16_t result = alu.operateAndSetFlags(registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL), registers.getValueFromRegisterPair(getRegisterPair()), true, flagsToExclude);
+                    
+                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, result >> 8, result);
+                    
+                    ++programCounter;
+                    return;
+                }
             }
             
             //Look at the last 3 bits
@@ -161,6 +260,29 @@ void Intel_8080_Emulator::decodeAndExecute()
                     programCounter += 2;
                     return;
                 }
+                    
+                //00DDD100 - Increment Register
+                case 0x4:
+                {
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister()), uint8_t(1), true, ALU::Flag::Carry, false);
+                    
+                    registers.setRegisterValue(getFirstRegister(), result);
+                    
+                    ++programCounter;
+                    return;
+                }
+                
+                //00DDD101 - Decrement Register
+                case 0x5:
+                {
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister()), uint8_t(1), false, ALU::Flag::Carry, false);
+                    
+                    registers.setRegisterValue(getFirstRegister(), result);
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
             }
             
         //01
@@ -381,10 +503,45 @@ void Intel_8080_Emulator::decodeAndExecute()
                     return;
                 }
                     
+                //11000011 - Jump
+                case 0xC3:
+                {
+                    programCounter = getAddressInDataBytes();
+                    return;
+                }
+                    
+                //11001101 - Call
+                case 0xCD:
+                {
+                    assert(false);
+                }
+                    
                 default:
                     break;
             }
-            return;
+            
+            //Check last 3 bits
+            switch (currentOpcode & 0x7)
+            {
+                //11CCC010 - Conditional Jump
+                case 0x2:
+                {
+                    if(checkCurrentCondition())
+                    {
+                        programCounter = getAddressInDataBytes();
+                    }
+                    else
+                    {
+                        programCounter += 3;
+                    }
+                    
+                    return;
+                }
+                    
+                default:
+                    break;
+            }
+            
     }
 }
 
@@ -427,4 +584,38 @@ uint16_t Intel_8080_Emulator::getAddressInDataBytes() const
     uint8_t highOrderAddrData = memory[programCounter + 2];
     
     return lowOrderAddrData << 8 | highOrderAddrData;
+}
+
+bool Intel_8080_Emulator::checkCurrentCondition() const
+{
+    uint8_t conditionVal = (currentOpcode & 0x38) >> 3;
+    
+    switch(conditionVal & 0x7)
+    {
+        case 0x0:
+            return !alu.getFlag(ALU::Flag::Zero);
+            
+        case 0x1:
+            return alu.getFlag(ALU::Flag::Zero);
+            
+        case 0x2:
+            return !alu.getFlag(ALU::Flag::Carry);
+            
+        case 0x3:
+            return alu.getFlag(ALU::Flag::Carry);
+            
+        case 0x4:
+            return !alu.getFlag(ALU::Flag::Parity);
+            
+        case 0x5:
+            return alu.getFlag(ALU::Flag::Parity);
+            
+        case 0x6:
+            return !alu.getFlag(ALU::Flag::Sign);
+            
+        case 0x7:
+            return alu.getFlag(ALU::Flag::Sign);
+    }
+    
+    return false;
 }
