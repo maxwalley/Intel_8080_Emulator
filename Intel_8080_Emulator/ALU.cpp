@@ -46,7 +46,7 @@ void ALU::checkCarryCheck()
     
     assert(getFlag(Flag::Carry));
     
-    setFlag(Flag::Carry, false);
+    setFlag(Flag::All, false);
 }
 
 ALU::Flag operator|(ALU::Flag first, ALU::Flag second)
