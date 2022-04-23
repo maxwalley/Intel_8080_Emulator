@@ -760,7 +760,26 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11001101 - Call
                 case 0xCD:
                 {
-                    assert(false);
+                    //Store the program counter
+                    stack.push(programCounter);
+                    programCounter = getAddressInDataBytes();
+                    return;
+                }
+                    
+                //11001001 - Return
+                case 0xC9:
+                {
+                    programCounter = stack.top();
+                    stack.pop();
+                    return;
+                }
+                    
+                    
+                //11101001 - Jump H and L indirect - move H and L to Program Counter
+                case 0xE9:
+                {
+                    programCounter = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    return;
                 }
                     
                 default:
@@ -782,6 +801,48 @@ void Intel_8080_Emulator::decodeAndExecute()
                         programCounter += 3;
                     }
                     
+                    return;
+                }
+                
+                //11CCC100 - Conditional Call
+                case 0x4:
+                {
+                    if(checkCurrentCondition())
+                    {
+                        //Store the program counter
+                        stack.push(programCounter);
+                        programCounter = getAddressInDataBytes();
+                    }
+                    else
+                    {
+                        programCounter += 3;
+                    }
+                    
+                    return;
+                }
+                    
+                //11CCC000 - Conditional Return
+                case 0x0:
+                {
+                    if(checkCurrentCondition())
+                    {
+                        programCounter = stack.top();
+                        stack.pop();
+                    }
+                    else
+                    {
+                        ++programCounter;
+                    }
+                    
+                    return;
+                }
+                    
+                //11NNN111 - Restart
+                case 0xC7:
+                {
+                    stack.push(programCounter);
+                    uint8_t restartNumber = (currentOpcode & 0x38) >> 3;
+                    programCounter = restartNumber * 8;
                     return;
                 }
                     

@@ -11,6 +11,7 @@
 #include <vector>
 #include "RegisterManager.hpp"
 #include "ALU.hpp"
+#include <stack>
 
 class Intel_8080_Emulator
 {
@@ -34,8 +35,7 @@ private:
     
     uint16_t programCounter;
     
-    uint8_t stackPointer;
-    std::array<uint16_t, 32> stack;
+    std::stack<uint16_t> stack;
     
     std::array<uint8_t, 16384> memory;
     
