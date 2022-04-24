@@ -17,7 +17,7 @@ class Intel_8080_Emulator
 {
 public:
     Intel_8080_Emulator();
-    ~Intel_8080_Emulator();
+    virtual ~Intel_8080_Emulator();
     
 private:
     void fetch();
@@ -31,6 +31,9 @@ private:
     
     bool checkCurrentCondition() const;
     
+    virtual uint8_t inputOperation(uint8_t port)=0;
+    virtual void outputOperation(uint8_t port, uint8_t value)=0;
+    
     uint8_t currentOpcode;
     
     uint16_t programCounter;
@@ -41,4 +44,6 @@ private:
     
     RegisterManager registers;
     ALU alu;
+    
+    bool haltFlag = false;
 };

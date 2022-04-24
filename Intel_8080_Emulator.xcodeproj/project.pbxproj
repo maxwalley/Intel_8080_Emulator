@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B77D1401281568DD00B34422 /* SpaceInvaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */; };
 		B77E15F3280198FC0051302D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15F2280198FC0051302D /* main.cpp */; };
 		B77E15FB280199160051302D /* Intel_8080_Emulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */; };
 		B77E16012801AA570051302D /* RegisterManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15FF2801AA570051302D /* RegisterManager.cpp */; };
@@ -26,6 +27,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SpaceInvaders.cpp; sourceTree = "<group>"; };
+		B77D1400281568DD00B34422 /* SpaceInvaders.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SpaceInvaders.hpp; sourceTree = "<group>"; };
 		B77E15EF280198FC0051302D /* Intel_8080_Emulator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Intel_8080_Emulator; sourceTree = BUILT_PRODUCTS_DIR; };
 		B77E15F2280198FC0051302D /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Intel_8080_Emulator.cpp; sourceTree = "<group>"; };
@@ -67,6 +70,8 @@
 			isa = PBXGroup;
 			children = (
 				B77E15F2280198FC0051302D /* main.cpp */,
+				B77D1400281568DD00B34422 /* SpaceInvaders.hpp */,
+				B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */,
 				B77E15FA280199160051302D /* Intel_8080_Emulator.hpp */,
 				B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */,
 				B77E16002801AA570051302D /* RegisterManager.hpp */,
@@ -137,6 +142,7 @@
 				B77E16012801AA570051302D /* RegisterManager.cpp in Sources */,
 				B77E15F3280198FC0051302D /* main.cpp in Sources */,
 				B77E1604280350CB0051302D /* ALU.cpp in Sources */,
+				B77D1401281568DD00B34422 /* SpaceInvaders.cpp in Sources */,
 				B77E15FB280199160051302D /* Intel_8080_Emulator.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

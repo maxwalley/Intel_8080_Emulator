@@ -19,7 +19,15 @@ Intel_8080_Emulator::~Intel_8080_Emulator()
 
 void Intel_8080_Emulator::fetch()
 {
-    
+    /*while(;)
+    {
+        if(haltFlag)
+        {
+            return;
+        }
+        
+        //Fetch
+    }*/
 }
 
 void Intel_8080_Emulator::decodeAndExecute()
@@ -212,6 +220,13 @@ void Intel_8080_Emulator::decodeAndExecute()
                     return;
                 }
                     
+                //00000000 - No Op
+                case 0x0:
+                {
+                    ++programCounter;
+                    return;
+                }
+                    
                 default:
                     break;
             }
@@ -348,6 +363,12 @@ void Intel_8080_Emulator::decodeAndExecute()
         //01
         case 0x40:
             
+            //01110110 - Halt
+            if((currentOpcode & 0xFF) == 0x76)
+            {
+                haltFlag = true;
+            }
+            
             //01DDD110 - Move from memory
             if((currentOpcode & 0x7) == 0x6)
             {
@@ -362,7 +383,7 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //01110SSS - Move to memory
-            else if((currentOpcode & 0x70) == 0x70)
+            else if((currentOpcode & 0xF8) == 0x70)
             {
                 uint16_t destMemoryLocation = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                 
@@ -782,6 +803,74 @@ void Intel_8080_Emulator::decodeAndExecute()
                     return;
                 }
                     
+                //11110101 - Push processor status word
+                case 0xF5:
+                {
+                    stack.push((alu.createStatusByte() << 8) | registers.getRegisterValue(RegisterManager::Register::A));
+                    ++programCounter;
+                    return;
+                }
+                    
+                //11110001 - Pop processor status word
+                case 0xF1:
+                {
+                    uint16_t data = stack.top();
+                    
+                    alu.setFromStatusByte((data & 0xF0) >> 8);
+                    registers.setRegisterValue(RegisterManager::Register::A, data & 0xF);
+                    
+                    stack.pop();
+                    ++programCounter;
+                    return;
+                }
+                    
+                //11100011 - Exchange stack top with H and L
+                case 0xE3:
+                {
+                    uint16_t oldStackVal = stack.top();
+                    
+                    stack.top() = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    
+                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, oldStackVal & 0xF, (oldStackVal & 0xF0) >> 8);
+                    
+                    ++programCounter;
+                    return;
+                }
+                    
+                //11111001 - Move HL to SP
+                case 0xF9:
+                {
+                    stack.top() = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    ++programCounter;
+                    return;
+                }
+                    
+                //11011011 - Input
+                case 0xDB:
+                {
+                    registers.setRegisterValue(RegisterManager::Register::A, inputOperation(memory[programCounter + 1]));
+                    ++programCounter;
+                }
+                    
+                //11010011 - Output
+                case 0xD3:
+                {
+                    outputOperation(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
+                    ++programCounter;
+                }
+                    
+                //11111011 - Enable Interrupts
+                case 0xFB:
+                {
+                    assert(false);
+                }
+                    
+                //11110011 - Disable Interrupts
+                case 0xF3:
+                {
+                    assert(false);
+                }
+                    
                 default:
                     break;
             }
@@ -838,7 +927,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 }
                     
                 //11NNN111 - Restart
-                case 0xC7:
+                case 0x7:
                 {
                     stack.push(programCounter);
                     uint8_t restartNumber = (currentOpcode & 0x38) >> 3;
@@ -849,6 +938,33 @@ void Intel_8080_Emulator::decodeAndExecute()
                 default:
                     break;
             }
+            
+        //Check the last 4 bits
+        switch (currentOpcode & 0xF)
+        {
+            //11RP0101 - Push
+            case 0x5:
+            {
+                stack.push(registers.getValueFromRegisterPair(getRegisterPair()));
+                ++programCounter;
+                return;
+            }
+                
+            //11RP0001 - Pop
+            case 0x1:
+            {
+                uint16_t data = stack.top();
+                
+                registers.setRegisterPair(getRegisterPair(), data & 0xF, (data & 0xF0) >> 8);
+                
+                stack.pop();
+                ++programCounter;
+                return;
+            }
+                
+            default:
+                break;
+        }
             
     }
 }

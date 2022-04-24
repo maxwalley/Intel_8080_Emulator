@@ -5,12 +5,11 @@
 //  Created by Max Walley on 09/04/2022.
 //
 
-#include "Intel_8080_Emulator.hpp"
-#include <iostream>
+#include "SpaceInvaders.hpp"
 
 int main(int argc, const char * argv[])
 {
-    Intel_8080_Emulator emulator;
+    SpaceInvaders emulator;
     
     return 0;
 }

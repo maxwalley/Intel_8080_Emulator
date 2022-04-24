@@ -48,6 +48,9 @@ public:
     template<unsigned_integral IntType>
     IntType operateAndSetFlags(IntType first, IntType second, Operation op = Operation::Addition, Flag flagsToExclude = static_cast<Flag>(0), bool useCarry = false);
     
+    uint8_t createStatusByte() const;
+    void setFromStatusByte(uint8_t statusByte);
+    
 private:
     //Returns true if even parity
     template<unsigned_integral IntType>

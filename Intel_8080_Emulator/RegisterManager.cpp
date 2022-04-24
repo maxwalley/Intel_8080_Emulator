@@ -64,8 +64,12 @@ RegisterManager::RegisterPair RegisterManager::getPairFromEncodedValue(uint8_t v
 {
     uint8_t index = value & 0x3;
     
-    //NEED TO IMPLEMENT STACK POINTER
-    assert(index != 3);
+    if(index == 3)
+    {
+        //We don't use a stack pointer
+        assert(false);
+        return RegisterPair::BC;
+    }
     
     return static_cast<RegisterPair>(index);
 }

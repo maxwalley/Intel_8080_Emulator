@@ -36,6 +36,31 @@ bool ALU::getFlag(Flag f) const
     return false;
 }
 
+uint8_t ALU::createStatusByte() const
+{
+    //Set to 01000000
+    uint8_t statusByte = 0x40;
+    
+    statusByte |= uint8_t(getFlag(Flag::Carry));
+    statusByte |= uint8_t(getFlag(Flag::Parity)) << 2;
+    statusByte |= uint8_t(getFlag(Flag::AuxillaryCarry)) << 4;
+    statusByte |= uint8_t(getFlag(Flag::Zero)) << 6;
+    statusByte |= uint8_t(getFlag(Flag::Sign)) << 7;
+    
+    return statusByte;
+}
+
+void ALU::setFromStatusByte(uint8_t statusByte)
+{
+    setFlag(Flag::Carry, statusByte & 0x1);
+    setFlag(Flag::Parity, statusByte & 0x4);
+    setFlag(Flag::AuxillaryCarry, statusByte & 0x10);
+    setFlag(Flag::Zero, statusByte & 0x40);
+    setFlag(Flag::Sign, statusByte & 0x80);
+    
+    return;
+}
+
 void ALU::checkCarryCheck()
 {
     //Check that carry check works
