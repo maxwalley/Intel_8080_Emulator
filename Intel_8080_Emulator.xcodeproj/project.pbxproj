@@ -29,6 +29,7 @@
 /* Begin PBXFileReference section */
 		B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SpaceInvaders.cpp; sourceTree = "<group>"; };
 		B77D1400281568DD00B34422 /* SpaceInvaders.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SpaceInvaders.hpp; sourceTree = "<group>"; };
+		B77D1403281580C900B34422 /* Machine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Machine.hpp; sourceTree = "<group>"; };
 		B77E15EF280198FC0051302D /* Intel_8080_Emulator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Intel_8080_Emulator; sourceTree = BUILT_PRODUCTS_DIR; };
 		B77E15F2280198FC0051302D /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Intel_8080_Emulator.cpp; sourceTree = "<group>"; };
@@ -70,6 +71,7 @@
 			isa = PBXGroup;
 			children = (
 				B77E15F2280198FC0051302D /* main.cpp */,
+				B77D1403281580C900B34422 /* Machine.hpp */,
 				B77D1400281568DD00B34422 /* SpaceInvaders.hpp */,
 				B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */,
 				B77E15FA280199160051302D /* Intel_8080_Emulator.hpp */,

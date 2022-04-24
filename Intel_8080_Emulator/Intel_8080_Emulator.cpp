@@ -7,9 +7,9 @@
 
 #include "Intel_8080_Emulator.hpp"
 
-Intel_8080_Emulator::Intel_8080_Emulator()
+Intel_8080_Emulator::Intel_8080_Emulator(std::unique_ptr<Machine> encapsulatingMachine)  : machine(std::move(encapsulatingMachine))
 {
-
+    assert(machine);
 }
 
 Intel_8080_Emulator::~Intel_8080_Emulator()
@@ -848,14 +848,14 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11011011 - Input
                 case 0xDB:
                 {
-                    registers.setRegisterValue(RegisterManager::Register::A, inputOperation(memory[programCounter + 1]));
+                    registers.setRegisterValue(RegisterManager::Register::A, machine->inputOperation(memory[programCounter + 1]));
                     ++programCounter;
                 }
                     
                 //11010011 - Output
                 case 0xD3:
                 {
-                    outputOperation(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
+                    machine->outputOperation(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
                     ++programCounter;
                 }
                     

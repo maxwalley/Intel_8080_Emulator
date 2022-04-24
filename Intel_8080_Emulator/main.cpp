@@ -5,11 +5,12 @@
 //  Created by Max Walley on 09/04/2022.
 //
 
+#include "Intel_8080_Emulator.hpp"
 #include "SpaceInvaders.hpp"
 
 int main(int argc, const char * argv[])
 {
-    SpaceInvaders emulator;
+    Intel_8080_Emulator emulator(std::make_unique<SpaceInvaders>());
     
     return 0;
 }

@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "Intel_8080_Emulator.hpp"
+#include "Machine.hpp"
 
-class SpaceInvaders  : public Intel_8080_Emulator
+class SpaceInvaders  : public Machine
 {
 public:
     SpaceInvaders();
