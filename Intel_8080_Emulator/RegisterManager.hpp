@@ -32,7 +32,8 @@ public:
     {
         BC,
         DE,
-        HL
+        HL,
+        SP
     };
     
     uint8_t getRegisterValue(Register reg) const;
@@ -40,6 +41,7 @@ public:
     
     uint16_t getValueFromRegisterPair(RegisterPair pair) const;
     void setRegisterPair(RegisterPair pair, uint8_t highOrderVal, uint8_t lowOrderVal);
+    void setRegisterPair(RegisterPair pair, uint16_t val);
     
     static std::optional<Register>  getRegFromEncodedValue(uint8_t value);
     static RegisterPair getPairFromEncodedValue(uint8_t value);
@@ -51,4 +53,6 @@ private:
     Register nextReg(Register reg) const;
     
     std::array<uint8_t, 8> registers;
+    
+    uint16_t stackPointer;
 };

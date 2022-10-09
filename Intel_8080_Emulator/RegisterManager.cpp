@@ -26,22 +26,38 @@ void RegisterManager::setRegisterValue(Register reg, uint8_t newValue)
 
 uint16_t RegisterManager::getValueFromRegisterPair(RegisterPair pair) const
 {
+    if(pair == RegisterPair::SP)
+    {
+        return stackPointer;
+    }
+    
     Register firstReg = regFromPair(pair);
     Register secondReg = nextReg(firstReg);
     
     uint8_t higherOrderBits = getRegisterValue(firstReg);
     uint8_t LowerOrderBits = getRegisterValue(secondReg);
     
-    return LowerOrderBits << 8 | higherOrderBits;
+    return higherOrderBits << 8 | LowerOrderBits;
 }
 
 void RegisterManager::setRegisterPair(RegisterPair pair, uint8_t highOrderVal, uint8_t lowOrderVal)
 {
+    setRegisterPair(pair, (highOrderVal << 8) | lowOrderVal);
+}
+
+void RegisterManager::setRegisterPair(RegisterPair pair, uint16_t val)
+{
+    if(pair == RegisterPair::SP)
+    {
+        stackPointer = val;
+        return;
+    }
+    
     Register firstReg = regFromPair(pair);
     Register secondReg = nextReg(firstReg);
     
-    setRegisterValue(firstReg, highOrderVal);
-    setRegisterValue(secondReg, lowOrderVal);
+    setRegisterValue(firstReg, val >> 8);
+    setRegisterValue(secondReg, val);
 }
 
 std::optional<RegisterManager::Register> RegisterManager::getRegFromEncodedValue(uint8_t value)
@@ -66,9 +82,7 @@ RegisterManager::RegisterPair RegisterManager::getPairFromEncodedValue(uint8_t v
     
     if(index == 3)
     {
-        //We don't use a stack pointer
-        assert(false);
-        return RegisterPair::BC;
+        return RegisterPair::SP;
     }
     
     return static_cast<RegisterPair>(index);
@@ -86,6 +100,10 @@ RegisterManager::Register RegisterManager::regFromPair(RegisterPair pair) const
             
         case RegisterPair::HL:
             return Register::H;
+            
+        case RegisterPair::SP:
+            assert(false);
+            return Register::B;
     };
 }
 

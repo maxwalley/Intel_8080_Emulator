@@ -7,9 +7,11 @@
 
 #include "Intel_8080_Emulator.hpp"
 
-Intel_8080_Emulator::Intel_8080_Emulator(std::unique_ptr<Machine> encapsulatingMachine)  : machine(std::move(encapsulatingMachine))
+#include <iostream>
+
+Intel_8080_Emulator::Intel_8080_Emulator()
 {
-    assert(machine);
+    programCounter = 0x0;
 }
 
 Intel_8080_Emulator::~Intel_8080_Emulator()
@@ -17,17 +19,36 @@ Intel_8080_Emulator::~Intel_8080_Emulator()
     
 }
 
-void Intel_8080_Emulator::fetch()
+void Intel_8080_Emulator::runCycle()
 {
-    /*while(;)
+    if(!haltFlag)
     {
-        if(haltFlag)
+        fetch();
+        
+        if(debugMode)
         {
-            return;
+            std::cout << std::bitset<8>(currentOpcode) << std::endl;
+            std::cout << getCurrentOpName() << std::endl;
         }
         
-        //Fetch
-    }*/
+        decodeAndExecute();
+        
+        const auto startGraphicsIt = memory.cbegin() + 0x2400;
+        const auto endGraphicsIt = memory.cbegin() + 0x3FFF + 1;
+        
+        if(std::any_of(startGraphicsIt, endGraphicsIt, [](const uint8_t memVal)
+        {
+            return memVal != 0x0;
+        }))
+        {
+            std::cout << "Graphics" << std::endl;
+        }
+    }
+}
+
+void Intel_8080_Emulator::fetch()
+{
+    currentOpcode = memory[programCounter];
 }
 
 void Intel_8080_Emulator::decodeAndExecute()
@@ -288,9 +309,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP0011 - Increment Register Pair
                 case 0x3:
                 {
-                    uint16_t incrementedVal = registers.getValueFromRegisterPair(getRegisterPair()) + 1;
-                    
-                    registers.setRegisterPair(getRegisterPair(), incrementedVal >> 8, incrementedVal);
+                    registers.setRegisterPair(getRegisterPair(), registers.getValueFromRegisterPair(getRegisterPair()) + 1);
                     
                     ++programCounter;
                     return;
@@ -299,9 +318,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP1011 - Decrement Register Pair
                 case 0xB:
                 {
-                    uint16_t decrementedVal = registers.getValueFromRegisterPair(getRegisterPair()) - 1;
-                    
-                    registers.setRegisterPair(getRegisterPair(), decrementedVal >> 8, decrementedVal);
+                    registers.setRegisterPair(getRegisterPair(), registers.getValueFromRegisterPair(getRegisterPair()) - 1);
                     
                     ++programCounter;
                     return;
@@ -314,7 +331,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     
                     uint16_t result = alu.operateAndSetFlags(registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL), registers.getValueFromRegisterPair(getRegisterPair()), ALU::Operation::Addition, flagsToExclude);
                     
-                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, result >> 8, result);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, result);
                     
                     ++programCounter;
                     return;
@@ -357,8 +374,9 @@ void Intel_8080_Emulator::decodeAndExecute()
                     ++programCounter;
                     return;
                 }
-                    
             }
+            
+            break;
             
         //01
         case 0x40:
@@ -646,7 +664,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 default:
                     break;
             }
-            return;
+            break;
             
         //11
         case 0xc0:
@@ -679,11 +697,10 @@ void Intel_8080_Emulator::decodeAndExecute()
                 case 0xEB:
                 {
                     uint16_t hlVal = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
-                    
                     uint16_t deVal = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::DE);
                     
-                    registers.setRegisterPair(RegisterManager::RegisterPair::DE, hlVal >> 8, hlVal);
-                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, deVal >> 8, deVal);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::DE, hlVal);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, deVal);
                     
                     ++programCounter;
                     return;
@@ -781,17 +798,48 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11001101 - Call
                 case 0xCD:
                 {
-                    //Store the program counter
-                    stack.push(programCounter);
-                    programCounter = getAddressInDataBytes();
+                    if(debugMode)
+                    {
+                        if(5 == ((memory[programCounter + 2] << 8) | memory[programCounter + 1]))
+                        {
+                            if(registers.getRegisterValue(RegisterManager::Register::C) == 9)
+                            {
+                                uint16_t offset = (registers.getRegisterValue(RegisterManager::Register::D) << 8) | (registers.getRegisterValue(RegisterManager::Register::E));
+                            
+                                const auto messageStart = memory.begin() + offset+3;
+                                const auto messageEnd = std::find(messageStart, memory.end(), '$');
+                            
+                                std::for_each(messageStart, messageEnd, [](uint8_t val)
+                                {
+                                    std::cout << val;
+                                });
+                            
+                                std::cout << std::endl;
+                            }
+                            else if (registers.getRegisterValue(RegisterManager::Register::C) == 2)
+                            {
+                                std::cout << "print char routine called" << std::endl;
+                            }
+                        }
+                        else if (0 == ((memory[programCounter + 2] << 8) | memory[programCounter + 1]))
+                        {
+                            exit(0);
+                        }
+                        else
+                        {
+                            call();
+                        }
+                        return;
+                    }
+                    
+                    call();
                     return;
                 }
                     
                 //11001001 - Return
                 case 0xC9:
                 {
-                    programCounter = stack.top();
-                    stack.pop();
+                    ret();
                     return;
                 }
                     
@@ -806,7 +854,12 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11110101 - Push processor status word
                 case 0xF5:
                 {
-                    stack.push((alu.createStatusByte() << 8) | registers.getRegisterValue(RegisterManager::Register::A));
+                    uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
+                    
+                    memory[--sp] = registers.getRegisterValue(RegisterManager::Register::A);
+                    memory[--sp] = alu.createStatusByte();
+                    
+                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
                     ++programCounter;
                     return;
                 }
@@ -814,12 +867,12 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11110001 - Pop processor status word
                 case 0xF1:
                 {
-                    uint16_t data = stack.top();
+                    uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
                     
-                    alu.setFromStatusByte((data & 0xF0) >> 8);
-                    registers.setRegisterValue(RegisterManager::Register::A, data & 0xF);
+                    alu.setFromStatusByte(memory[sp++]);
+                    registers.setRegisterValue(RegisterManager::Register::A, memory[sp++]);
                     
-                    stack.pop();
+                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
                     ++programCounter;
                     return;
                 }
@@ -827,11 +880,11 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11100011 - Exchange stack top with H and L
                 case 0xE3:
                 {
-                    uint16_t oldStackVal = stack.top();
+                    const uint16_t oldStackVal = memory[registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP)];
+                    const uint16_t hlRegVal = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                     
-                    stack.top() = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
-                    
-                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, oldStackVal & 0xF, (oldStackVal & 0xF0) >> 8);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, hlRegVal);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, oldStackVal);
                     
                     ++programCounter;
                     return;
@@ -840,7 +893,8 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11111001 - Move HL to SP
                 case 0xF9:
                 {
-                    stack.top() = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL));
+                    
                     ++programCounter;
                     return;
                 }
@@ -848,14 +902,14 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11011011 - Input
                 case 0xDB:
                 {
-                    registers.setRegisterValue(RegisterManager::Register::A, machine->inputOperation(memory[programCounter + 1]));
+                    registers.setRegisterValue(RegisterManager::Register::A, inputOperation(memory[programCounter + 1]));
                     ++programCounter;
                 }
                     
                 //11010011 - Output
                 case 0xD3:
                 {
-                    machine->outputOperation(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
+                    outputOperation(memory[programCounter + 1], registers.getRegisterValue(RegisterManager::Register::A));
                     ++programCounter;
                 }
                     
@@ -898,9 +952,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     if(checkCurrentCondition())
                     {
-                        //Store the program counter
-                        stack.push(programCounter);
-                        programCounter = getAddressInDataBytes();
+                        call();
                     }
                     else
                     {
@@ -915,8 +967,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     if(checkCurrentCondition())
                     {
-                        programCounter = stack.top();
-                        stack.pop();
+                        ret();
                     }
                     else
                     {
@@ -929,7 +980,13 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11NNN111 - Restart
                 case 0x7:
                 {
-                    stack.push(programCounter);
+                    uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
+                    
+                    memory[--sp] = programCounter >> 8;
+                    memory[--sp] = programCounter;
+                    
+                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
+                    
                     uint8_t restartNumber = (currentOpcode & 0x38) >> 3;
                     programCounter = restartNumber * 8;
                     return;
@@ -945,7 +1002,13 @@ void Intel_8080_Emulator::decodeAndExecute()
             //11RP0101 - Push
             case 0x5:
             {
-                stack.push(registers.getValueFromRegisterPair(getRegisterPair()));
+                const uint16_t val = registers.getValueFromRegisterPair(getRegisterPair());
+                uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
+                
+                memory[--sp] = val >> 8;
+                memory[--sp] = val;
+                
+                registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
                 ++programCounter;
                 return;
             }
@@ -953,11 +1016,12 @@ void Intel_8080_Emulator::decodeAndExecute()
             //11RP0001 - Pop
             case 0x1:
             {
-                uint16_t data = stack.top();
+                uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
                 
-                registers.setRegisterPair(getRegisterPair(), data & 0xF, (data & 0xF0) >> 8);
+                registers.setRegisterPair(getRegisterPair(), memory[sp + 1], memory[sp]);
                 
-                stack.pop();
+                sp += 2;
+                registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
                 ++programCounter;
                 return;
             }
@@ -965,7 +1029,6 @@ void Intel_8080_Emulator::decodeAndExecute()
             default:
                 break;
         }
-            
     }
 }
 
@@ -984,7 +1047,7 @@ RegisterManager::Register Intel_8080_Emulator::getFirstRegister() const
 
 RegisterManager::Register Intel_8080_Emulator::getSecondRegister() const
 {
-    uint8_t regIndex =  currentOpcode & 0x6;
+    uint8_t regIndex =  currentOpcode & 0x7;
     
     if(const auto reg = RegisterManager::getRegFromEncodedValue(regIndex); reg)
     {
@@ -1007,7 +1070,7 @@ uint16_t Intel_8080_Emulator::getAddressInDataBytes() const
     uint8_t lowOrderAddrData = memory[programCounter + 1];
     uint8_t highOrderAddrData = memory[programCounter + 2];
     
-    return lowOrderAddrData << 8 | highOrderAddrData;
+    return highOrderAddrData << 8 | lowOrderAddrData;
 }
 
 bool Intel_8080_Emulator::checkCurrentCondition() const
@@ -1042,4 +1105,385 @@ bool Intel_8080_Emulator::checkCurrentCondition() const
     }
     
     return false;
+}
+
+void Intel_8080_Emulator::call()
+{
+    uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
+    
+    memory[--sp] = memory[programCounter + 2];
+    memory[--sp] = memory[programCounter + 1];
+    
+    registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
+    
+    programCounter = getAddressInDataBytes();
+}
+
+void Intel_8080_Emulator::ret()
+{
+    const uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
+    
+    programCounter = (memory[sp + 1] << 8) | memory[sp];
+    
+    registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp + 2);
+}
+
+std::string Intel_8080_Emulator::getCurrentOpName() const
+{
+    //Check first two bits
+    switch(currentOpcode & 0xc0)
+    {
+        //00
+        case 0x00:
+            
+            switch(currentOpcode & 0xFF)
+            {
+                //00110110 - Move to memory immediate
+                case 0x36:
+                    return "Move to memory immediate";
+                    
+                //00111010 - Load Accumulator Direct
+                case 0x3A:
+                    return "Load accumulator direct";
+                    
+                //00110010 - Store Accumulator Direct
+                case 0x32:
+                    return "Store accumulator direct";
+                    
+                //00101010 - Load H and L direct
+                case 0x2A:
+                    return "Load H and L direct";
+                    
+                //00100010 - Store H and L direct
+                case 0x22:
+                    return "Store H and L direct";
+                    
+                //00110100 - Increment Memory
+                case 0x34:
+                    return "Increment memory";
+                    
+                //00110101 - Decrement Memory
+                case 0x35:
+                    return "Decrement memory";
+                    
+                //00100111 - Decimal Adjust Accumulator
+                case 0x27:
+                    return "Decimal adjust accumulator";
+                    
+                //00000111 - Rotate Left
+                case 0x7:
+                    return "Rotate left";
+                    
+                //00001111 - Rotate Right
+                case 0xF:
+                    return "Rotate right";
+                    
+                //00010111 - Rotate Left Through Carry
+                case 0x1E:
+                    return "Rotate left through carry";
+                    
+                //00011111 - Rotate Right Through Carry
+                case 0x1F:
+                    return "Rotate right through carry";
+                    
+                //00101111 - Complement Accumulator
+                case 0x2F:
+                    return "Complement accumulator";
+                 
+                //00111111 - Complement Carry
+                case 0x3F:
+                    return "Complement carry";
+                    
+                //00110111 - Set Carry
+                case 0x37:
+                    return "Set carry";
+                    
+                //00000000 - No Op
+                case 0x0:
+                    return "No Op";
+                    
+                default:
+                    break;
+            }
+            
+            //Look at last 4 bits
+            switch(currentOpcode & 0xCF)
+            {
+                //00RP0001 - Load Register Pair Immediate
+                case 0x1:
+                    return "Load register pair immediate";
+                
+                //00RP1010 - Load accumulator indirect
+                case 0xA:
+                    return "Load accumulator indirect";
+                
+                //00RP0010 - Store accumulator indirect
+                case 0x2:
+                    return "Store accumulator indirect";
+                    
+                //00RP0011 - Increment Register Pair
+                case 0x3:
+                    return "Increment register pair";
+                    
+                //00RP1011 - Decrement Register Pair
+                case 0xB:
+                    return "Decrement Register Pair";
+                    
+                //00RP1001 - Add Register Pair to H and L
+                case 0x9:
+                    return "Add Register Pair to H and L";
+            }
+            
+            //Look at the last 3 bits
+            switch(currentOpcode & 0xC7)
+            {
+                //00DDD110 - Move Immediate
+                case 0x6:
+                    return "Move immediate";
+                    
+                //00DDD100 - Increment Register
+                case 0x4:
+                    return "Increment register";
+                
+                //00DDD101 - Decrement Register
+                case 0x5:
+                    return "Decrement register";
+                    
+            }
+            
+        //01
+        case 0x40:
+            
+            //01110110 - Halt
+            if((currentOpcode & 0xFF) == 0x76)
+                return "Halt";
+            
+            //01DDD110 - Move from memory
+            if((currentOpcode & 0x7) == 0x6)
+                return "Move from memory";
+            
+            //01110SSS - Move to memory
+            else if((currentOpcode & 0xF8) == 0x70)
+                return "Move to memory";
+            
+            //01DDDSSS - Move register
+            else
+                return "Move register";
+            
+            break;
+    
+        //10
+        case 0x80:
+            
+            switch (currentOpcode & 0xFF)
+            {
+                //10000110 - Add Memory
+                case 0x86:
+                    return "Add memory";
+                    
+                //10001110 - Add memory with carry
+                case 0x8E:
+                    return "Add memory with carry";
+                    
+                //10010110 - Subtract Memory
+                case 0x96:
+                    return "Subtract memory";
+                    
+                //10011110 - Subtract Memory with Borrow
+                case 0x9E:
+                    return "Subtract memory with borrow";
+                    
+                //10100110 - AND Memory
+                case 0xA6:
+                    return "AND memory";
+                    
+                //10101110 - Exclusive OR Memory
+                case 0xAE:
+                    return "Exclusive OR memory";
+                    
+                //10110110 - OR Memory
+                case 0xB6:
+                    return "OR memory";
+                    
+                //10111110 - Compare Memory
+                case 0xBE:
+                    return "Compare Memory";
+                    
+                default:
+                    break;
+            }
+            
+            //Look at the first 5 bits
+            switch(currentOpcode & 0xF8)
+            {
+                //10000SSS - Add Register
+                case 0x80:
+                    return "Add register";
+                
+                //10001SSS - Add Register with carry
+                case 0x88:
+                    return "Add register with carry";
+                    
+                //10010SSS - Subtract Register
+                case 0x90:
+                    return "Subtract register";
+                    
+                //10011SSS - Subtract Register with borrow
+                case 0x91:
+                    return "Subtract register with borrow";
+                
+                //10100SSS - AND Register
+                case 0xA0:
+                    return "AND register";
+                    
+                //10101SSS - Exclusive OR Register
+                case 0xA8:
+                    return "Exclusive OR register";
+                    
+                //10110SSS - OR Register
+                case 0xB0:
+                    return "OR register";
+                    
+                //10111SSS - Compare Register
+                case 0xB8:
+                    return "Compare register";
+                    
+                default:
+                    break;
+            }
+            break;
+            
+        //11
+        case 0xc0:
+            
+            switch (currentOpcode & 0xFF)
+            {
+                //11000110 - Add Immediate
+                case 0xC6:
+                    return "Add immediate";
+                    
+                //11001110 - Add Immediate with Carry
+                case 0xCE:
+                    return "Add immediate with Carry";
+                
+                //11101011 - Exchange H and L with D and E
+                case 0xEB:
+                    return "Exchange H and L with D and E";
+                
+                //11010110 - Subtract Immediate
+                case 0xD6:
+                    return "Subtract immediate";
+                    
+                //11011110 - Subtract Immediate with Borrow
+                case 0xDE:
+                    return "Subtract immediate with borrow";
+                    
+                //11100110 - AND Immediate
+                case 0xE6:
+                    return "AND immediate";
+                    
+                //11101110 - Exclusive OR Immediate
+                case 0xEE:
+                    return "Exclusive OR immediate";
+                    
+                //11110110 - OR Immediate
+                case 0xF6:
+                    return "OR immediate";
+                    
+                //11111110 - Compare Immediate
+                case 0xFE:
+                    return "Compare immediate";
+                    
+                //11000011 - Jump
+                case 0xC3:
+                    return "Jump";
+                    
+                //11001101 - Call
+                case 0xCD:
+                    return "Call";
+                    
+                //11001001 - Return
+                case 0xC9:
+                    return "Return";
+                    
+                //11101001 - Jump H and L indirect - move H and L to Program Counter
+                case 0xE9:
+                    return "Jump H and L indirect - move H and L to program counter";
+                    
+                //11110101 - Push processor status word
+                case 0xF5:
+                    return "Push processor status word";
+                    
+                //11110001 - Pop processor status word
+                case 0xF1:
+                    return "Pop processor status word";
+                    
+                //11100011 - Exchange stack top with H and L
+                case 0xE3:
+                    return "Exchange stack top with H and L";
+                    
+                //11111001 - Move HL to SP
+                case 0xF9:
+                    return "Move HL to SP";
+                    
+                //11011011 - Input
+                case 0xDB:
+                    return "Input";
+                    
+                //11010011 - Output
+                case 0xD3:
+                    return "Output";
+                    
+                //11111011 - Enable Interrupts
+                case 0xFB:
+                    return "Enable interrupts";
+                    
+                //11110011 - Disable Interrupts
+                case 0xF3:
+                    return "Disable interrupts";
+                    
+                default:
+                    break;
+            }
+            
+            //Check last 3 bits
+            switch (currentOpcode & 0x7)
+            {
+                //11CCC010 - Conditional Jump
+                case 0x2:
+                    return "Conditional jump";
+                
+                //11CCC100 - Conditional Call
+                case 0x4:
+                    return "Conditional call";
+                    
+                //11CCC000 - Conditional Return
+                case 0x0:
+                    return "Conditional return";
+                    
+                //11NNN111 - Restart
+                case 0x7:
+                    return "Restart";
+                    
+                default:
+                    break;
+            }
+            
+        //Check the last 4 bits
+        switch (currentOpcode & 0xF)
+        {
+            //11RP0101 - Push
+            case 0x5:
+                return "Push";
+                
+            //11RP0001 - Pop
+            case 0x1:
+                return "Pop";
+                
+            default:
+                break;
+        }
+    }
+    
+    return "Unrecognised Op";
 }

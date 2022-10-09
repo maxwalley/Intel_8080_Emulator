@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		B77D1401281568DD00B34422 /* SpaceInvaders.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */; };
+		B77D140A2815A80400B34422 /* GLUT.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B77D14082815A7CB00B34422 /* GLUT.framework */; };
+		B77D140B281607FC00B34422 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B77D14062815A65000B34422 /* OpenGL.framework */; };
 		B77E15F3280198FC0051302D /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15F2280198FC0051302D /* main.cpp */; };
 		B77E15FB280199160051302D /* Intel_8080_Emulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */; };
 		B77E16012801AA570051302D /* RegisterManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B77E15FF2801AA570051302D /* RegisterManager.cpp */; };
@@ -29,7 +31,8 @@
 /* Begin PBXFileReference section */
 		B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SpaceInvaders.cpp; sourceTree = "<group>"; };
 		B77D1400281568DD00B34422 /* SpaceInvaders.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = SpaceInvaders.hpp; sourceTree = "<group>"; };
-		B77D1403281580C900B34422 /* Machine.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = Machine.hpp; sourceTree = "<group>"; };
+		B77D14062815A65000B34422 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		B77D14082815A7CB00B34422 /* GLUT.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLUT.framework; path = System/Library/Frameworks/GLUT.framework; sourceTree = SDKROOT; };
 		B77E15EF280198FC0051302D /* Intel_8080_Emulator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Intel_8080_Emulator; sourceTree = BUILT_PRODUCTS_DIR; };
 		B77E15F2280198FC0051302D /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		B77E15F9280199160051302D /* Intel_8080_Emulator.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Intel_8080_Emulator.cpp; sourceTree = "<group>"; };
@@ -45,17 +48,29 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B77D140B281607FC00B34422 /* OpenGL.framework in Frameworks */,
+				B77D140A2815A80400B34422 /* GLUT.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B77D14052815A64F00B34422 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B77D14082815A7CB00B34422 /* GLUT.framework */,
+				B77D14062815A65000B34422 /* OpenGL.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		B77E15E6280198FC0051302D = {
 			isa = PBXGroup;
 			children = (
 				B77E15F1280198FC0051302D /* Intel_8080_Emulator */,
 				B77E15F0280198FC0051302D /* Products */,
+				B77D14052815A64F00B34422 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -71,7 +86,6 @@
 			isa = PBXGroup;
 			children = (
 				B77E15F2280198FC0051302D /* main.cpp */,
-				B77D1403281580C900B34422 /* Machine.hpp */,
 				B77D1400281568DD00B34422 /* SpaceInvaders.hpp */,
 				B77D13FF281568DD00B34422 /* SpaceInvaders.cpp */,
 				B77E15FA280199160051302D /* Intel_8080_Emulator.hpp */,
@@ -156,6 +170,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -208,6 +223,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				VALIDATE_WORKSPACE_SKIPPED_SDK_FRAMEWORKS = "";
 			};
 			name = Debug;
 		};
@@ -215,6 +231,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -260,6 +277,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				VALIDATE_WORKSPACE_SKIPPED_SDK_FRAMEWORKS = "";
 			};
 			name = Release;
 		};
