@@ -54,4 +54,6 @@ private:
     ALU alu;
     
     bool haltFlag = false;
+    
+    uint64_t opCounter = 0;
 };

@@ -80,13 +80,12 @@ IntType ALU::operateAndSetFlags(IntType first, IntType second, Operation op, Fla
     {
         case Operation::Addition:
             
+            result = first + second + (useCarry ? getFlag(Flag::Carry) : 0);
+            
             if(!(flagsToExclude & Flag::Carry))
             {
-                //This seems to check for carry in apple clang
-                setFlag(Flag::Carry, first + second + (useCarry ? getFlag(Flag::Carry) : 0) > std::numeric_limits<IntType>::max());
+                setFlag(Flag::Carry, result < first);
             }
-        
-            result = first + second + (useCarry ? getFlag(Flag::Carry) : 0);
             
             break;
         

@@ -23,12 +23,16 @@ void Intel_8080_Emulator::runCycle()
 {
     if(!haltFlag)
     {
+        ++opCounter;
+        
         fetch();
         
         if(debugMode)
         {
-            std::cout << std::bitset<8>(currentOpcode) << std::endl;
-            std::cout << getCurrentOpName() << std::endl;
+            std::cout << "------------------" << std::endl << "Opcode: " << std::bitset<8>(currentOpcode) << std::endl
+                      << "Op Name: " << getCurrentOpName() << std::endl
+                      << "Op Number: " << opCounter << std::endl
+                      << "Current Data Bytes: " << getAddressInDataBytes() << std::endl;
         }
         
         decodeAndExecute();
