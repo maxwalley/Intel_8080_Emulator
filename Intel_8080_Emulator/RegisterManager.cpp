@@ -14,14 +14,14 @@ RegisterManager::RegisterManager()
 
 uint8_t RegisterManager::getRegisterValue(Register reg) const
 {
-    return registers[static_cast<int>(reg)];
+    return registers.at(static_cast<int>(reg));
 };
 
 void RegisterManager::setRegisterValue(Register reg, uint8_t newValue)
 {
     int regIndex = static_cast<int>(reg);
     
-    registers[regIndex] = newValue;
+    registers.at(regIndex) = newValue;
 }
 
 uint16_t RegisterManager::getValueFromRegisterPair(RegisterPair pair) const

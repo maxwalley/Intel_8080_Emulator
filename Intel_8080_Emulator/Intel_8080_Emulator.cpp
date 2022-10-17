@@ -32,7 +32,11 @@ void Intel_8080_Emulator::runCycle()
             std::cout << "------------------" << std::endl << "Opcode: " << std::bitset<8>(currentOpcode) << std::endl
                       << "Op Name: " << getCurrentOpName() << std::endl
                       << "Op Number: " << opCounter << std::endl
-                      << "Current Data Bytes: " << getAddressInDataBytes() << std::endl;
+                      << "Current Data Bytes: " << getAddressInDataBytes() << std::endl
+                      << "Current Condition: " << getCurrentConditionName() << std::endl
+                      << "Current Flag Values: " << getFlagValuesStr() << std::endl
+                      << "Current Reg Values: " << getCurrentRegValuesStr() << std::endl
+                      << "Current Stack Pointer Val: " << registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP) << std::endl;
         }
         
         decodeAndExecute();
@@ -350,7 +354,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     RegisterManager::Register destReg = getFirstRegister();
                     uint8_t dataByte = memory[programCounter + 1];
-
+                    
                     registers.setRegisterValue(destReg, dataByte);
                         
                     programCounter += 2;
@@ -724,7 +728,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11011110 - Subtract Immediate with Borrow
                 case 0xDE:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], ALU::Operation::Subtraction, static_cast<ALU::Flag>(0), true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), memory[programCounter + 1], ALU::Operation::Subtraction, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -956,6 +960,8 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     if(checkCurrentCondition())
                     {
+                        //This is where we leave the script
+                        //assert(false);
                         call();
                     }
                     else
@@ -1115,8 +1121,12 @@ void Intel_8080_Emulator::call()
 {
     uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
     
-    memory[--sp] = memory[programCounter + 2];
-    memory[--sp] = memory[programCounter + 1];
+    uint16_t nextInstructionPos = programCounter + 3;
+    
+    std::cout << "Pos Stored: " << nextInstructionPos << std::endl;
+    
+    memory[--sp] = nextInstructionPos >> 8;
+    memory[--sp] = nextInstructionPos;
     
     registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
     
@@ -1128,6 +1138,8 @@ void Intel_8080_Emulator::ret()
     const uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
     
     programCounter = (memory[sp + 1] << 8) | memory[sp];
+    
+    std::cout << "Pos Restored: " << programCounter << std::endl;
     
     registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp + 2);
 }
@@ -1490,4 +1502,64 @@ std::string Intel_8080_Emulator::getCurrentOpName() const
     }
     
     return "Unrecognised Op";
+}
+
+std::string Intel_8080_Emulator::getCurrentConditionName() const
+{
+    uint8_t conditionVal = (currentOpcode & 0x38) >> 3;
+    
+    switch(conditionVal & 0x7)
+    {
+        case 0x0:
+            return "Not Zero";
+            
+        case 0x1:
+            return "Zero";
+            
+        case 0x2:
+            return "No Carry";
+            
+        case 0x3:
+            return "Carry";
+            
+        case 0x4:
+            return "Parity Odd";
+            
+        case 0x5:
+            return "Parity Even";
+            
+        case 0x6:
+            return "Plus";
+            
+        case 0x7:
+            return "Minus";
+    }
+    
+    return "";
+}
+
+std::string Intel_8080_Emulator::getFlagValuesStr() const
+{
+    std::stringstream strm;
+    
+    strm << "Z: " << int(alu.getFlag(ALU::Flag::Zero)) << ", S: " << int(alu.getFlag(ALU::Flag::Sign)) << ", P: " << int(alu.getFlag(ALU::Flag::Parity)) << ", C: " << int(alu.getFlag(ALU::Flag::Carry)) << ", AC: " << int(alu.getFlag(ALU::Flag::AuxillaryCarry));
+    
+    return strm.str();
+}
+
+std::string Intel_8080_Emulator::getCurrentRegValuesStr() const
+{
+    std::stringstream strm;
+    
+    strm << "B: " << int(registers.getRegisterValue(RegisterManager::Register::B)) <<
+          ", C: " << int(registers.getRegisterValue(RegisterManager::Register::C)) <<
+          ", D: " << int(registers.getRegisterValue(RegisterManager::Register::D)) <<
+          ", E: " << int(registers.getRegisterValue(RegisterManager::Register::E)) <<
+          ", H: " << int(registers.getRegisterValue(RegisterManager::Register::H)) <<
+          ", L: " << int(registers.getRegisterValue(RegisterManager::Register::L)) <<
+          ", W: " << int(registers.getRegisterValue(RegisterManager::Register::W)) <<
+          ", Z: " << int(registers.getRegisterValue(RegisterManager::Register::Z)) <<
+          ", A: " << int(registers.getRegisterValue(RegisterManager::Register::A));
+    
+    return strm.str();
 }

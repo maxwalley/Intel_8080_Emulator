@@ -52,7 +52,7 @@ private:
     Register regFromPair(RegisterPair pair) const;
     Register nextReg(Register reg) const;
     
-    std::array<uint8_t, 8> registers;
+    std::array<uint8_t, 9> registers;
     
-    uint16_t stackPointer;
+    uint16_t stackPointer = 0;
 };

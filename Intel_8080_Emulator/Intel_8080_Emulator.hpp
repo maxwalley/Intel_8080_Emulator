@@ -12,6 +12,7 @@
 #include "RegisterManager.hpp"
 #include "ALU.hpp"
 #include <stack>
+#include <sstream>
 
 class Intel_8080_Emulator
 {
@@ -21,7 +22,7 @@ public:
     
     void runCycle();
     
-    bool debugMode = true;
+    static constexpr bool debugMode = true;
     
 protected:
     std::array<uint8_t, 65535> memory;
@@ -47,6 +48,9 @@ private:
     void ret();
     
     std::string getCurrentOpName() const;
+    std::string getCurrentConditionName() const;
+    std::string getFlagValuesStr() const;
+    std::string getCurrentRegValuesStr() const;
     
     uint8_t currentOpcode;
     
