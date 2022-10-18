@@ -599,7 +599,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 }
                     
                 //10011SSS - Subtract Register with borrow
-                case 0x91:
+                case 0x98:
                 {
                     uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::Subtraction, ALU::Flag::None, true);
                     
@@ -1345,7 +1345,7 @@ std::string Intel_8080_Emulator::getCurrentOpName() const
                     return "Subtract register";
                     
                 //10011SSS - Subtract Register with borrow
-                case 0x91:
+                case 0x98:
                     return "Subtract register with borrow";
                 
                 //10100SSS - AND Register
