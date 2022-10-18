@@ -200,7 +200,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 }
                     
                 //00010111 - Rotate Left Through Carry
-                case 0x1E:
+                case 0x17:
                 {
                     ALU::Flag flagsToIgnore = ALU::Flag::Zero | ALU::Flag::Sign | ALU::Flag::Parity | ALU::Flag::AuxillaryCarry;
                     
@@ -1195,7 +1195,7 @@ std::string Intel_8080_Emulator::getCurrentOpName() const
                     return "Rotate right";
                     
                 //00010111 - Rotate Left Through Carry
-                case 0x1E:
+                case 0x17:
                     return "Rotate left through carry";
                     
                 //00011111 - Rotate Right Through Carry
