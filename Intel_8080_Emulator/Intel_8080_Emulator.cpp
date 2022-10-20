@@ -888,11 +888,19 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11100011 - Exchange stack top with H and L
                 case 0xE3:
                 {
-                    const uint16_t oldStackVal = memory[registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP)];
-                    const uint16_t hlRegVal = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
+                    const uint16_t stackVal = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
                     
-                    registers.setRegisterPair(RegisterManager::RegisterPair::SP, hlRegVal);
-                    registers.setRegisterPair(RegisterManager::RegisterPair::HL, oldStackVal);
+                    const uint8_t firstStackVal = memory[stackVal];
+                    const uint8_t secondStackVal = memory[stackVal + 1];
+                    
+                    const uint8_t lVal = registers.getRegisterValue(RegisterManager::Register::L);
+                    const uint8_t hVal = registers.getRegisterValue(RegisterManager::Register::H);
+                    
+                    memory[stackVal] = lVal;
+                    memory[stackVal + 1] = hVal;
+                    
+                    registers.setRegisterValue(RegisterManager::Register::L, firstStackVal);
+                    registers.setRegisterValue(RegisterManager::Register::H, secondStackVal);
                     
                     ++programCounter;
                     return;
