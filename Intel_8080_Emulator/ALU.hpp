@@ -98,8 +98,6 @@ IntType ALU::operateAndSetFlags(IntType first, IntType second, Operation op, Fla
                 {
                     setFlag(Flag::Carry, getFlag(Flag::Carry) > second || (second - getFlag(Flag::Carry)) > first);
                 }
-                
-                result = first - second - getFlag(Flag::Carry);
             }
             else
             {
