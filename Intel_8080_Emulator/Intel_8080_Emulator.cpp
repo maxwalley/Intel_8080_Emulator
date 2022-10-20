@@ -157,15 +157,15 @@ void Intel_8080_Emulator::decodeAndExecute()
                     uint8_t accumulatorVal = registers.getRegisterValue(RegisterManager::Register::A);
                     
                     //If the value of the least significant 4 bits of the accumulator is greater than 9 or if the AC flag is set, 6 is added to the accumulator.
-                    if(((accumulatorVal & 0xF) > 0x9) | alu.getFlag(ALU::Flag::AuxillaryCarry))
+                    if(((accumulatorVal & 0xF) > 0x9) || alu.getFlag(ALU::Flag::AuxillaryCarry))
                     {
                         accumulatorVal += 0x6;
                     }
                     
                     //If the value of the most significant 4 bits of the accumulator is now greater than 9, or if the CY flag is set, 6 is added to the most significant 4 bits of the accumulator.
-                    if((((accumulatorVal & 0xF0) >> 4) > 0x9) | alu.getFlag(ALU::Flag::Carry))
+                    if(((accumulatorVal & 0xF0) > 0x90) || (((accumulatorVal & 0xF0) >= 0x90) && ((accumulatorVal & 0xF) > 9)) || alu.getFlag(ALU::Flag::Carry))
                     {
-                        accumulatorVal += 0x60;
+                        accumulatorVal = alu.operateAndSetFlags(accumulatorVal, uint8_t(0x60));
                     }
                     
                     registers.setRegisterValue(RegisterManager::Register::A, accumulatorVal);
