@@ -39,7 +39,7 @@ void Intel_8080_Emulator::runCycle()
                       << "Current Stack Pointer Val: " << registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP) << std::endl;
         }
         
-        decodeAndExecute();
+        decodeAndExecute(currentOpcode);
         
         const auto startGraphicsIt = memory.cbegin() + 0x2400;
         const auto endGraphicsIt = memory.cbegin() + 0x3FFF + 1;
@@ -54,20 +54,28 @@ void Intel_8080_Emulator::runCycle()
     }
 }
 
+void Intel_8080_Emulator::performInterrupt(uint8_t opcode)
+{
+    if(interrupts)
+    {
+        decodeAndExecute(opcode);
+    }
+}
+
 void Intel_8080_Emulator::fetch()
 {
     currentOpcode = memory[programCounter];
 }
 
-void Intel_8080_Emulator::decodeAndExecute()
+void Intel_8080_Emulator::decodeAndExecute(uint8_t opcode)
 {
     //Check first two bits
-    switch(currentOpcode & 0xc0)
+    switch(opcode & 0xc0)
     {
         //00
         case 0x00:
             
-            switch(currentOpcode & 0xFF)
+            switch(opcode & 0xFF)
             {
                 //00110110 - Move to memory immediate
                 case 0x36:
@@ -261,12 +269,12 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //Look at last 4 bits
-            switch(currentOpcode & 0xCF)
+            switch(opcode & 0xCF)
             {
                 //00RP0001 - Load Register Pair Immediate
                 case 0x1:
                 {
-                    RegisterManager::RegisterPair destPair = getRegisterPair();
+                    RegisterManager::RegisterPair destPair = getRegisterPair(opcode);
                     uint8_t lowOrderByte = memory[programCounter + 1];
                     uint8_t highOrderByte = memory[programCounter + 2];
                     
@@ -279,7 +287,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP1010 - Load accumulator indirect
                 case 0xA:
                 {
-                    RegisterManager::RegisterPair pair = getRegisterPair();
+                    RegisterManager::RegisterPair pair = getRegisterPair(opcode);
                 
                     if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
                     {
@@ -298,7 +306,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP0010 - Store accumulator indirect
                 case 0x2:
                 {
-                    RegisterManager::RegisterPair pair = getRegisterPair();
+                    RegisterManager::RegisterPair pair = getRegisterPair(opcode);
                     
                     if(pair != RegisterManager::RegisterPair::BC && pair != RegisterManager::RegisterPair::DE)
                     {
@@ -317,7 +325,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP0011 - Increment Register Pair
                 case 0x3:
                 {
-                    registers.setRegisterPair(getRegisterPair(), registers.getValueFromRegisterPair(getRegisterPair()) + 1);
+                    registers.setRegisterPair(getRegisterPair(opcode), registers.getValueFromRegisterPair(getRegisterPair(opcode)) + 1);
                     
                     ++programCounter;
                     return;
@@ -326,7 +334,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00RP1011 - Decrement Register Pair
                 case 0xB:
                 {
-                    registers.setRegisterPair(getRegisterPair(), registers.getValueFromRegisterPair(getRegisterPair()) - 1);
+                    registers.setRegisterPair(getRegisterPair(opcode), registers.getValueFromRegisterPair(getRegisterPair(opcode)) - 1);
                     
                     ++programCounter;
                     return;
@@ -337,7 +345,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 {
                     ALU::Flag flagsToExclude = ALU::Flag::Zero | ALU::Flag::Sign | ALU::Flag::Parity | ALU::Flag::AuxillaryCarry;
                     
-                    uint16_t result = alu.operateAndSetFlags(registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL), registers.getValueFromRegisterPair(getRegisterPair()), ALU::Operation::Addition, flagsToExclude);
+                    uint16_t result = alu.operateAndSetFlags(registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL), registers.getValueFromRegisterPair(getRegisterPair(opcode)), ALU::Operation::Addition, flagsToExclude);
                     
                     registers.setRegisterPair(RegisterManager::RegisterPair::HL, result);
                     
@@ -347,12 +355,12 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //Look at the last 3 bits
-            switch(currentOpcode & 0xC7)
+            switch(opcode & 0xC7)
             {
                 //00DDD110 - Move Immediate
                 case 0x6:
                 {
-                    RegisterManager::Register destReg = getFirstRegister();
+                    RegisterManager::Register destReg = getFirstRegister(opcode);
                     uint8_t dataByte = memory[programCounter + 1];
                     
                     registers.setRegisterValue(destReg, dataByte);
@@ -364,9 +372,9 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00DDD100 - Increment Register
                 case 0x4:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister()), uint8_t(1), ALU::Operation::Addition, ALU::Flag::Carry, false);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister(opcode)), uint8_t(1), ALU::Operation::Addition, ALU::Flag::Carry, false);
                     
-                    registers.setRegisterValue(getFirstRegister(), result);
+                    registers.setRegisterValue(getFirstRegister(opcode), result);
                     
                     ++programCounter;
                     return;
@@ -375,9 +383,9 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //00DDD101 - Decrement Register
                 case 0x5:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister()), uint8_t(1), ALU::Operation::Subtraction, ALU::Flag::Carry, false);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getFirstRegister(opcode)), uint8_t(1), ALU::Operation::Subtraction, ALU::Flag::Carry, false);
                     
-                    registers.setRegisterValue(getFirstRegister(), result);
+                    registers.setRegisterValue(getFirstRegister(opcode), result);
                     
                     ++programCounter;
                     return;
@@ -390,17 +398,17 @@ void Intel_8080_Emulator::decodeAndExecute()
         case 0x40:
             
             //01110110 - Halt
-            if((currentOpcode & 0xFF) == 0x76)
+            if((opcode & 0xFF) == 0x76)
             {
                 haltFlag = true;
             }
             
             //01DDD110 - Move from memory
-            if((currentOpcode & 0x7) == 0x6)
+            if((opcode & 0x7) == 0x6)
             {
                 uint16_t sourceMemoryLocation = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                 
-                RegisterManager::Register destReg = getFirstRegister();
+                RegisterManager::Register destReg = getFirstRegister(opcode);
                 
                 registers.setRegisterValue(destReg, memory[sourceMemoryLocation]);
                 
@@ -409,11 +417,11 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //01110SSS - Move to memory
-            else if((currentOpcode & 0xF8) == 0x70)
+            else if((opcode & 0xF8) == 0x70)
             {
                 uint16_t destMemoryLocation = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::HL);
                 
-                RegisterManager::Register sourceReg = getSecondRegister();
+                RegisterManager::Register sourceReg = getSecondRegister(opcode);
                 
                 memory[destMemoryLocation] = registers.getRegisterValue(sourceReg);
                 
@@ -424,8 +432,8 @@ void Intel_8080_Emulator::decodeAndExecute()
             //01DDDSSS - Move register
             else
             {
-                RegisterManager::Register firstReg = getFirstRegister();
-                RegisterManager::Register secondReg = getSecondRegister();
+                RegisterManager::Register firstReg = getFirstRegister(opcode);
+                RegisterManager::Register secondReg = getSecondRegister(opcode);
                 
                 registers.setRegisterValue(firstReg, registers.getRegisterValue(secondReg));
                 
@@ -438,7 +446,7 @@ void Intel_8080_Emulator::decodeAndExecute()
         //10
         case 0x80:
             
-            switch (currentOpcode & 0xFF)
+            switch (opcode & 0xFF)
             {
                 //10000110 - Add Memory
                 case 0x86:
@@ -563,12 +571,12 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //Look at the first 5 bits
-            switch(currentOpcode & 0xF8)
+            switch(opcode & 0xF8)
             {
                 //10000SSS - Add Register
                 case 0x80:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A));
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister(opcode)), registers.getRegisterValue(RegisterManager::Register::A));
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -579,7 +587,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10001SSS - Add Register with carry
                 case 0x88:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister()), registers.getRegisterValue(RegisterManager::Register::A), ALU::Operation::Addition, ALU::Flag::None, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(getSecondRegister(opcode)), registers.getRegisterValue(RegisterManager::Register::A), ALU::Operation::Addition, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -590,7 +598,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10010SSS - Subtract Register
                 case 0x90:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::Subtraction);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister(opcode)), ALU::Operation::Subtraction);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -601,7 +609,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10011SSS - Subtract Register with borrow
                 case 0x98:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::Subtraction, ALU::Flag::None, true);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister(opcode)), ALU::Operation::Subtraction, ALU::Flag::None, true);
                     
                     registers.setRegisterValue(RegisterManager::Register::A, result);
                     
@@ -612,7 +620,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10100SSS - AND Register
                 case 0xA0:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::And, ALU::Flag::Carry);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister(opcode)), ALU::Operation::And, ALU::Flag::Carry);
                     
                     //Clear the carry flag
                     alu.setFlag(ALU::Flag::Carry, false);
@@ -626,7 +634,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10101SSS - Exclusive OR Register
                 case 0xA8:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::Xor, ALU::Flag::CarryFlags);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister(opcode)), ALU::Operation::Xor, ALU::Flag::CarryFlags);
                     
                     //Clear Carry and Aux Carry flags
                     alu.setFlag(ALU::Flag::CarryFlags, false);
@@ -640,7 +648,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //10110SSS - OR Register
                 case 0xB0:
                 {
-                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister()), ALU::Operation::Or, ALU::Flag::CarryFlags);
+                    uint8_t result = alu.operateAndSetFlags(registers.getRegisterValue(RegisterManager::Register::A), registers.getRegisterValue(getSecondRegister(opcode)), ALU::Operation::Or, ALU::Flag::CarryFlags);
                     
                     //Clear Carry and Aux Carry flags
                     alu.setFlag(ALU::Flag::CarryFlags, false);
@@ -655,7 +663,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                 case 0xB8:
                 {
                     uint8_t accVal = registers.getRegisterValue(RegisterManager::Register::A);
-                    uint8_t regVal = registers.getRegisterValue(getSecondRegister());
+                    uint8_t regVal = registers.getRegisterValue(getSecondRegister(opcode));
                     
                     alu.operateAndSetFlags(accVal, regVal, ALU::Operation::Subtraction, ALU::Flag::Zero | ALU::Flag::Carry);
                     
@@ -677,7 +685,7 @@ void Intel_8080_Emulator::decodeAndExecute()
         //11
         case 0xc0:
             
-            switch (currentOpcode & 0xFF)
+            switch (opcode & 0xFF)
             {
                 //11000110 - Add Immediate
                 case 0xC6:
@@ -932,13 +940,15 @@ void Intel_8080_Emulator::decodeAndExecute()
                 //11111011 - Enable Interrupts
                 case 0xFB:
                 {
-                    assert(false);
+                    interrupts = true;
+                    ++programCounter;
                 }
                     
                 //11110011 - Disable Interrupts
                 case 0xF3:
                 {
-                    assert(false);
+                    interrupts = false;
+                    ++programCounter;
                 }
                     
                 default:
@@ -946,7 +956,7 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
             //Check last 3 bits
-            switch (currentOpcode & 0x7)
+            switch (opcode & 0x7)
             {
                 //11CCC010 - Conditional Jump
                 case 0x2:
@@ -1005,7 +1015,7 @@ void Intel_8080_Emulator::decodeAndExecute()
                     
                     registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
                     
-                    uint8_t restartNumber = (currentOpcode & 0x38) >> 3;
+                    uint8_t restartNumber = (opcode & 0x38) >> 3;
                     programCounter = restartNumber * 8;
                     return;
                 }
@@ -1015,12 +1025,12 @@ void Intel_8080_Emulator::decodeAndExecute()
             }
             
         //Check the last 4 bits
-        switch (currentOpcode & 0xF)
+        switch (opcode & 0xF)
         {
             //11RP0101 - Push
             case 0x5:
             {
-                const uint16_t val = registers.getValueFromRegisterPair(getRegisterPair());
+                const uint16_t val = registers.getValueFromRegisterPair(getRegisterPair(opcode));
                 uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
                 
                 memory[--sp] = val >> 8;
@@ -1036,7 +1046,7 @@ void Intel_8080_Emulator::decodeAndExecute()
             {
                 uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
                 
-                registers.setRegisterPair(getRegisterPair(), memory[sp + 1], memory[sp]);
+                registers.setRegisterPair(getRegisterPair(opcode), memory[sp + 1], memory[sp]);
                 
                 sp += 2;
                 registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp);
@@ -1050,9 +1060,9 @@ void Intel_8080_Emulator::decodeAndExecute()
     }
 }
 
-RegisterManager::Register Intel_8080_Emulator::getFirstRegister() const
+RegisterManager::Register Intel_8080_Emulator::getFirstRegister(uint8_t opcode) const
 {
-    uint8_t regIndex = (currentOpcode & 0x38) >> 3;
+    uint8_t regIndex = (opcode & 0x38) >> 3;
     
     if(const auto reg = RegisterManager::getRegFromEncodedValue(regIndex); reg)
     {
@@ -1063,9 +1073,9 @@ RegisterManager::Register Intel_8080_Emulator::getFirstRegister() const
     return RegisterManager::Register::A;
 }
 
-RegisterManager::Register Intel_8080_Emulator::getSecondRegister() const
+RegisterManager::Register Intel_8080_Emulator::getSecondRegister(uint8_t opcode) const
 {
-    uint8_t regIndex =  currentOpcode & 0x7;
+    uint8_t regIndex =  opcode & 0x7;
     
     if(const auto reg = RegisterManager::getRegFromEncodedValue(regIndex); reg)
     {
@@ -1076,9 +1086,9 @@ RegisterManager::Register Intel_8080_Emulator::getSecondRegister() const
     return RegisterManager::Register::A;
 }
 
-RegisterManager::RegisterPair Intel_8080_Emulator::getRegisterPair() const
+RegisterManager::RegisterPair Intel_8080_Emulator::getRegisterPair(uint8_t opcode) const
 {
-    uint8_t pairIndex = (currentOpcode & 0x30) >> 4;
+    uint8_t pairIndex = (opcode & 0x30) >> 4;
     
     return RegisterManager::getPairFromEncodedValue(pairIndex);
 }
@@ -1131,8 +1141,6 @@ void Intel_8080_Emulator::call()
     
     uint16_t nextInstructionPos = programCounter + 3;
     
-    std::cout << "Pos Stored: " << nextInstructionPos << std::endl;
-    
     memory[--sp] = nextInstructionPos >> 8;
     memory[--sp] = nextInstructionPos;
     
@@ -1146,8 +1154,6 @@ void Intel_8080_Emulator::ret()
     const uint16_t sp = registers.getValueFromRegisterPair(RegisterManager::RegisterPair::SP);
     
     programCounter = (memory[sp + 1] << 8) | memory[sp];
-    
-    std::cout << "Pos Restored: " << programCounter << std::endl;
     
     registers.setRegisterPair(RegisterManager::RegisterPair::SP, sp + 2);
 }

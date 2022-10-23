@@ -13,11 +13,16 @@
 #include <filesystem>
 #include <fstream>
 
+#include <SFML/Audio.hpp>
+#include <SFML/Graphics.hpp>
+
 class SpaceInvaders  : public Intel_8080_Emulator
 {
 public:
     SpaceInvaders();
     ~SpaceInvaders() override;
+    
+    void run();
     
     void triggerKeyDown(int keycode, int x, int y);
     void triggerKeyUp(int keycode, int x, int y);
@@ -35,4 +40,8 @@ private:
     uint16_t currentShiftVal = 0x0;
     
     std::vector<int> currentlyDownKeys;
+    
+    static constexpr double halfFrameTimeMS = 1000.0 / 60.0;
+    std::chrono::steady_clock::time_point lastHalfFrameTime;
+    bool onFirstHalf;
 };

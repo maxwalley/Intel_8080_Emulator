@@ -14,18 +14,63 @@ SpaceInvaders::SpaceInvaders()
     {
         std::cout << "Warning game failed to load" << std::endl;
         assert(false);
-    }
-    
-    while(true)
-    {
-        runCycle();
-        //std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        return;
     }
 }
 
 SpaceInvaders::~SpaceInvaders()
 {
     
+}
+
+void SpaceInvaders::run()
+{
+    // Create the main window
+    sf::RenderWindow mainWindow(sf::VideoMode(800, 600), "Space Invaders");
+
+    lastHalfFrameTime = std::chrono::steady_clock::now();
+    onFirstHalf = true;
+    
+    while(mainWindow.isOpen())
+    {
+        const auto currentTime = std::chrono::steady_clock::now();
+        const double timeDifferenceMS = std::chrono::duration<double>(currentTime - lastHalfFrameTime).count() * 1000.0;
+        
+        if(timeDifferenceMS > halfFrameTimeMS)
+        {
+            uint8_t restartNum = onFirstHalf ? 2 : 2;
+            
+            performInterrupt(0xD7);
+            
+            lastHalfFrameTime = currentTime;
+            onFirstHalf = !onFirstHalf;
+        }
+        
+        runCycle();
+        
+        // Process events
+        sf::Event event;
+        while(mainWindow.pollEvent(event))
+        {
+            // Close window: exit
+            if(event.type == sf::Event::Closed)
+            {
+                mainWindow.close();
+            }
+
+            // Escape pressed: exit
+            if(event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
+            {
+                mainWindow.close();
+            }
+        }
+
+        // Clear screen
+        mainWindow.clear();
+
+        // Update the window
+        mainWindow.display();
+    }
 }
 
 void SpaceInvaders::triggerKeyDown(int keycode, int x, int y)

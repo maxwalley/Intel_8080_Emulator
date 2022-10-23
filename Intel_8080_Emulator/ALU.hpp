@@ -94,6 +94,8 @@ IntType ALU::operateAndSetFlags(IntType first, IntType second, Operation op, Fla
             //Carry turns into borrow flag
             if(useCarry)
             {
+                result = first - second - getFlag(Flag::Carry);
+                
                 if(!(flagsToExclude & Flag::Carry))
                 {
                     setFlag(Flag::Carry, getFlag(Flag::Carry) > second || (second - getFlag(Flag::Carry)) > first);

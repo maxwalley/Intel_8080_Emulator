@@ -1,55 +1,93 @@
+
 //
-//  main.cpp
-//  Intel_8080_Emulator
+// Disclaimer:
+// ----------
 //
-//  Created by Max Walley on 09/04/2022.
+// This code will work only if you selected window, graphics and audio.
 //
+// Note that the "Run Script" build phase will copy the required frameworks
+// or dylibs to your application bundle so you can execute it on any OS X
+// computer.
+//
+// Your resource files (images, sounds, fonts, ...) are also copied to your
+// application bundle. To get the path to these resources, use the helper
+// function `resourcePath()` from ResourcePath.hpp
+//
+
+#include <SFML/Audio.hpp>
+#include <SFML/Graphics.hpp>
+
+// Here is a small helper for you! Have a look.
+#include "ResourcePath.hpp"
 
 #include "SpaceInvaders.hpp"
 
-#define GL_SILENCE_DEPRECATION
-#include <GLUT/glut.h>
-
-#include <cmath>
-
-SpaceInvaders emulator;
-
-int main(int argc, char* argv[])
+int main(int, char const**)
 {
-    glutInit(&argc, argv);
+    SpaceInvaders emulator;
+    emulator.run();
+    
+    // Set the Icon
+    /*sf::Image icon;
+    if (!icon.loadFromFile(resourcePath() + "icon.png")) {
+        return EXIT_FAILURE;
+    }
+    window.setIcon(icon.getSize().x, icon.getSize().y, icon.getPixelsPtr());
 
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-    glutInitWindowSize(256 * 2, 224 * 2);
-    
-    glutInitWindowPosition(50, 50);
-    
-    glutCreateWindow("Test");
-    
-    glutSpecialFunc([](int keycode, int x, int y){
-        emulator.triggerKeyDown(keycode, x, y);
-    });
-    
-    glutSpecialUpFunc([](int keycode, int x, int y){
-        emulator.triggerKeyUp(keycode, x, y);
-    });
-    
-    const auto displayFunc = [](){
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Load a sprite to display
+    sf::Texture texture;
+    if (!texture.loadFromFile(resourcePath() + "cute_image.jpg")) {
+        return EXIT_FAILURE;
+    }
+    sf::Sprite sprite(texture);
 
-            glBegin(GL_TRIANGLES);
-                glVertex3f(-0.5,-0.5,0.0);
-                glVertex3f(0.5,0.0,0.0);
-                glVertex3f(0.0,0.5,0.0);
-            glEnd();
-        
-        glFlush();
-    };
-    
-    glutDisplayFunc(displayFunc);
-    
-    glutIdleFunc(displayFunc);
-    
-    glutMainLoop();
-    
-    return 0;
+    // Create a graphical text to display
+    sf::Font font;
+    if (!font.loadFromFile(resourcePath() + "sansation.ttf")) {
+        return EXIT_FAILURE;
+    }
+    sf::Text text("Hello SFML", font, 50);
+    text.setFillColor(sf::Color::Black);
+
+    // Load a music to play
+    sf::Music music;
+    if (!music.openFromFile(resourcePath() + "nice_music.ogg")) {
+        return EXIT_FAILURE;
+    }
+
+    // Play the music
+    music.play();
+
+    // Start the game loop
+    while (window.isOpen())
+    {
+        // Process events
+        sf::Event event;
+        while (window.pollEvent(event))
+        {
+            // Close window: exit
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+
+            // Escape pressed: exit
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+                window.close();
+            }
+        }
+
+        // Clear screen
+        window.clear();
+
+        // Draw the sprite
+        window.draw(sprite);
+
+        // Draw the string
+        window.draw(text);
+
+        // Update the window
+        window.display();
+    }*/
+
+    return EXIT_SUCCESS;
 }

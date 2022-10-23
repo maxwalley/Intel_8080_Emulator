@@ -20,11 +20,12 @@ public:
     Intel_8080_Emulator();
     virtual ~Intel_8080_Emulator();
     
-    void runCycle();
-    
-    static constexpr bool debugMode = true;
+    static constexpr bool debugMode = false;
     
 protected:
+    void runCycle();
+    void performInterrupt(uint8_t opcode);
+    
     std::array<uint8_t, 65535> memory;
     
     uint16_t programCounter;
@@ -34,11 +35,11 @@ private:
     virtual void outputOperation(uint8_t port, uint8_t value)=0;
     
     void fetch();
-    void decodeAndExecute();
+    void decodeAndExecute(uint8_t opcode);
     
-    RegisterManager::Register getFirstRegister() const;
-    RegisterManager::Register getSecondRegister() const;
-    RegisterManager::RegisterPair getRegisterPair() const;
+    RegisterManager::Register getFirstRegister(uint8_t opcode) const;
+    RegisterManager::Register getSecondRegister(uint8_t opcode) const;
+    RegisterManager::RegisterPair getRegisterPair(uint8_t opcode) const;
     
     uint16_t getAddressInDataBytes() const;
     
@@ -58,6 +59,7 @@ private:
     ALU alu;
     
     bool haltFlag = false;
+    bool interrupts = false;
     
     uint64_t opCounter = 0;
 };
